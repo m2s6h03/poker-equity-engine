@@ -2,10 +2,6 @@
 
 A Texas Hold'em equity calculator built from scratch in vanilla JavaScript. No libraries, no dependencies — just combinatorics, Monte Carlo simulation, and probability math.
 
-**[Live Demo](https://your-username.github.io/poker-equity-engine)**
-
-![screenshot](screenshot.png)
-
 ---
 
 ## Features
@@ -90,14 +86,6 @@ Or serve it:
 npx serve .
 # → http://localhost:3000
 ```
-
----
-
-## Deploying to GitHub Pages
-
-1. Go to **Settings → Pages**
-2. Set source to `main` branch, `/ (root)`
-3. Your app will be live at `https://your-username.github.io/poker-equity-engine`
 
 ---
 

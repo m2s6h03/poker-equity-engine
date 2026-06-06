@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Poker Equity Engine</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0e0f;
+      --bg2: #161618;
+      --bg3: #1e1e21;
+      --border: rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.14);
+      --text: #f0f0f0;
+      --text2: #999;
+      --text3: #555;
+      --green: #1DB974;
+      --red: #E05252;
+      --blue: #4A9EE0;
+      --amber: #E0A84A;
+      --radius: 8px;
+      --radius-lg: 12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container { max-width: 720px; margin: 0 auto; }
+
+    header {
+      margin-bottom: 2rem;
+      border-bottom: 0.5px solid var(--border);
+      padding-bottom: 1.25rem;
+    }
+
+    header h1 {
+      font-size: 18px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      color: var(--text);
+    }
+
+    header p {
+      font-size: 12px;
+      color: var(--text3);
+      margin-top: 4px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 1.5rem;
+      border-bottom: 0.5px solid var(--border);
+    }
+
+    .tab {
+      padding: 8px 16px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      color: var(--text3);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .tab:hover { color: var(--text2); }
+    .tab.active { color: var(--text); border-bottom-color: var(--green); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .section-label {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 10px;
+    }
+
+    .block {
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+
+    .player-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .player-label { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); }
+
+    .del-btn {
+      background: none;
+      border: none;
+      color: var(--text3);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 0;
+      line-height: 1;
+    }
+    .del-btn:hover { color: var(--red); }
+
+    .card-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .card-slot {
+      width: 50px;
+      height: 72px;
+      border-radius: 6px;
+      border: 1.5px dashed var(--border2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      position: relative;
+      user-select: none;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .card-slot:hover { border-color: rgba(255,255,255,0.3); background: var(--bg3); }
+    .card-slot.filled { border-style: solid; border-color: var(--border); background: var(--bg3); }
+
+    .card-slot .rank { font-size: 18px; font-weight: 600; line-height: 1; }
+    .card-slot .suit { font-size: 13px; line-height: 1; }
+    .card-slot.red { color: #E05252; }
+    .card-slot.black { color: #f0f0f0; }
+
+    .card-slot .rm {
+      position: absolute;
+      top: -7px; right: -7px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--bg);
+      border: 0.5px solid var(--border2);
+      font-size: 9px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text2);
+      z-index: 2;
+    }
+    .card-slot.filled:hover .rm { display: flex; }
+
+    .add-icon { font-size: 20px; color: var(--text3); line-height: 1; }
+
+    .hand-name { font-size: 11px; color: var(--text3); margin-top: 6px; min-height: 15px; }
+
+    .picker {
+      background: var(--bg2);
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .picker.open { display: block; }
+
+    .picker-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .picker-head span { font-size: 11px; color: var(--text2); letter-spacing: 0.08em; text-transform: uppercase; }
+
+    .close-btn {
+      background: none; border: none;
+      color: var(--text3); cursor: pointer;
+      font-size: 15px; padding: 0;
+    }
+    .close-btn:hover { color: var(--text); }
+
+    .suit-row { display: flex; gap: 8px; margin-bottom: 10px; }
+
+    .suit-btn {
+      padding: 5px 14px;
+      border-radius: 6px;
+      border: 0.5px solid var(--border);
+      cursor: pointer;
+      font-size: 15px;
+      background: var(--bg3);
+      color: var(--text);
+      transition: background 0.1s, border-color 0.1s;
+      font-family: inherit;
+    }
+    .suit-btn:hover { border-color: var(--border2); }
+    .suit-btn.active { border-color: rgba(255,255,255,0.3); background: #2a2a2e; }
+    .suit-btn.red { color: #E05252; }
+
+    .rank-grid { display: grid; grid-template-columns: repeat(13, 1fr); gap: 4px; }
+
+    .rank-btn {
+      padding: 6px 2px;
+      text-align: center;
+      border-radius: 4px;
+      border: 0.5px solid var(--border);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--bg3);
+      color: var(--text);
+      font-family: inherit;
+      transition: background 0.1s;
+    }
+    .rank-btn:hover { background: #2a2a2e; }
+    .rank-btn.used { opacity: 0.2; pointer-events: none; }
+
+    .add-player-btn {
+      background: none;
+      border: 1px dashed var(--border2);
+      border-radius: var(--radius);
+      padding: 7px 14px;
+      font-size: 11px;
+      font-family: inherit;
+      color: var(--text3);
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: color 0.15s, border-color 0.15s;
+      margin-bottom: 12px;
+    }
+    .add-player-btn:hover { color: var(--text2); border-color: var(--border2); }
+
+    .run-btn {
+      width: 100%;
+      padding: 11px;
+      border-radius: var(--radius);
+      border: 0.5px solid var(--border2);
+      background: var(--bg3);
+      font-family: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      color: var(--text);
+      transition: background 0.15s;
+      margin-bottom: 8px;
+    }
+    .run-btn:hover { background: #252528; }
+    .run-btn:active { transform: scale(0.99); }
+    .run-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .sim-info { font-size: 11px; color: var(--text3); text-align: right; margin-bottom: 1rem; }
+
+    .results { display: none; }
+
+    .eq-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .eq-player { font-size: 12px; color: var(--text2); min-width: 64px; }
+    .eq-bar-wrap { flex: 1; height: 6px; border-radius: 3px; background: var(--bg3); overflow: hidden; }
+    .eq-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+    .eq-pct { font-size: 13px; font-weight: 500; min-width: 46px; text-align: right; }
+
+    .master-bar {
+      height: 10px;
+      border-radius: 5px;
+      background: var(--bg3);
+      overflow: hidden;
+      position: relative;
+      margin-top: 12px;
+    }
+    .master-fill {
+      position: absolute; top: 0; left: 0;
+      height: 100%;
+      background: var(--green);
+      transition: width 0.4s ease;
+    }
+
+    /* POT ODDS TAB */
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+
+    .input-wrap { display: flex; flex-direction: column; gap: 5px; }
+    .input-wrap label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text3); }
+
+    input[type="number"], select {
+      font-family: inherit;
+      font-size: 14px;
+      background: var(--bg3);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 10px;
+      color: var(--text);
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="number"]:focus, select:focus { border-color: var(--border2); }
+
+    .metric {
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+    }
+    .metric-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text3); margin-bottom: 4px; }
+    .metric-val { font-size: 22px; font-weight: 500; }
+    .metric-val.pos { color: var(--green); }
+    .metric-val.neg { color: var(--red); }
+    .metric-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+    .divider { border: none; border-top: 0.5px solid var(--border); margin: 1.25rem 0; }
+
+    .note { font-size: 11px; color: var(--text3); line-height: 1.6; margin-top: 8px; }
+
+    select option { background: var(--bg2); }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Poker Equity Engine</h1>
+    <p>Texas Hold'em · Monte Carlo · Pot Odds · EV</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('equity')">Equity Calculator</button>
+    <button class="tab" onclick="switchTab('odds')">Pot Odds / EV</button>
+  </div>
+
+  <!-- EQUITY TAB -->
+  <div id="tab-equity" class="tab-content active">
+    <div id="players-container"></div>
+
+    <button class="add-player-btn" id="add-player-btn" onclick="addPlayer()">+ add player</button>
+
+    <div class="block">
+      <div class="section-label">Board</div>
+      <div class="card-row" id="board-cards"></div>
+    </div>
+
+    <div id="picker-container" class="picker"></div>
+
+    <button class="run-btn" id="run-btn" onclick="runSim()">Run simulation — 10,000 hands</button>
+    <div class="sim-info" id="sim-info"></div>
+
+    <div class="results" id="results">
+      <div class="section-label">Results</div>
+      <div id="eq-bars"></div>
+      <div class="master-bar"><div class="master-fill" id="master-fill"></div></div>
+    </div>
+  </div>
+
+  <!-- ODDS TAB -->
+  <div id="tab-odds" class="tab-content">
+    <div class="section-label">Pot Odds Calculator</div>
+    <div class="grid-3">
+      <div class="input-wrap">
+        <label>Pot ($)</label>
+        <input type="number" id="pot" value="100" min="1" oninput="calcOdds()">
+      </div>
+      <div class="input-wrap">
+        <label>Bet to call ($)</label>
+        <input type="number" id="bet" value="40" min="1" oninput="calcOdds()">
+      </div>
+      <div class="input-wrap">
+        <label>Your equity (%)</label>
+        <input type="number" id="eq-input" value="35" min="0" max="100" step="0.1" oninput="calcOdds()">
+      </div>
+    </div>
+
+    <div class="grid-3" id="odds-out"></div>
+
+    <hr class="divider">
+
+    <div class="section-label">EV Calculator</div>
+    <div class="grid-3">
+      <div class="input-wrap">
+        <label>Win amount ($)</label>
+        <input type="number" id="ev-win" value="140" min="0" oninput="calcEV()">
+      </div>
+      <div class="input-wrap">
+        <label>Lose amount ($)</label>
+        <input type="number" id="ev-lose" value="40" min="0" oninput="calcEV()">
+      </div>
+      <div class="input-wrap">
+        <label>Win prob (%)</label>
+        <input type="number" id="ev-prob" value="35" min="0" max="100" step="0.1" oninput="calcEV()">
+      </div>
+    </div>
+    <div id="ev-out"></div>
+
+    <hr class="divider">
+
+    <div class="section-label">Outs Calculator</div>
+    <div class="grid-3">
+      <div class="input-wrap">
+        <label>Outs</label>
+        <input type="number" id="outs" value="9" min="1" max="47" oninput="calcOuts()">
+      </div>
+      <div class="input-wrap">
+        <label>Street</label>
+        <select id="outs-street" onchange="calcOuts()">
+          <option value="flop">Flop (2 to come)</option>
+          <option value="turn">Turn (1 to come)</option>
+        </select>
+      </div>
+      <div class="input-wrap">
+        <label>Equity</label>
+        <div id="outs-out" style="padding:8px 10px;font-size:18px;font-weight:500;color:var(--text)">—</div>
+      </div>
+    </div>
+    <div class="note">Rule of 4 &amp; 2: multiply outs × 4 on the flop, × 2 on the turn for a quick estimate.</div>
+  </div>
+</div>
+
+<script>
+const RANKS = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
+const SUITS = ['♠','♥','♦','♣'];
+const SUIT_COLOR = {'♠':'black','♥':'red','♦':'red','♣':'black'};
+const RANK_VAL = Object.fromEntries(RANKS.map((r,i) => [r,i]));
+const P_COLORS = ['#1DB974','#4A9EE0','#E05252','#C07AE0'];
+
+let players = [];
+let boardCards = [];
+let activePicker = null;
+let usedCards = new Set();
+
+function cardKey(r,s){ return r+s; }
+
+/* ── INIT ── */
+function init(){
+  players = [
+    {id:0, cards:[null,null], label:'Hero'},
+    {id:1, cards:[null,null], label:'Villain'}
+  ];
+  boardCards = [];
+  usedCards.clear();
+  render();
+}
+
+function addPlayer(){
+  if(players.length >= 4) return;
+  players.push({id:Date.now(), cards:[null,null], label:'Player '+(players.length+1)});
+  if(players.length >= 4) document.getElementById('add-player-btn').style.opacity = '0.3';
+  render();
+}
+
+function removePlayer(idx){
+  if(players.length <= 2) return;
+  players[idx].cards.forEach(c => { if(c) usedCards.delete(cardKey(c.rank,c.suit)); });
+  players.splice(idx,1);
+  document.getElementById('add-player-btn').style.opacity = '1';
+  render();
+}
+
+/* ── RENDER ── */
+function render(){
+  renderPlayers();
+  renderBoard();
+  closePicker();
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('sim-info').textContent = '';
+}
+
+function renderPlayers(){
+  const cont = document.getElementById('players-container');
+  cont.innerHTML = '';
+  players.forEach((p,i) => {
+    const div = document.createElement('div');
+    div.className = 'block';
+    div.innerHTML = `
+      <div class="player-header">
+        <span class="player-label">${p.label}</span>
+        ${players.length > 2 ? `<button class="del-btn" onclick="removePlayer(${i})">✕</button>` : ''}
+      </div>
+      <div class="card-row" id="p${i}-cards"></div>
+      <div class="hand-name" id="p${i}-hand"></div>`;
+    cont.appendChild(div);
+    renderSlots(`p${i}-cards`, p.cards, si => openPicker('player', i, si));
+  });
+}
+
+function renderBoard(){
+  const slots = Array(5).fill(null);
+  boardCards.forEach((c,i) => slots[i] = c);
+  renderSlots('board-cards', slots, si => openPicker('board', null, si));
+}
+
+function renderSlots(id, cards, onEmpty){
+  const cont = document.getElementById(id);
+  if(!cont) return;
+  cont.innerHTML = '';
+  cards.forEach((c,i) => {
+    const el = document.createElement('div');
+    el.className = 'card-slot' + (c ? ' filled' : '');
+    if(c){
+      el.classList.add(SUIT_COLOR[c.suit]);
+      el.innerHTML = `<span class="rank">${c.rank}</span><span class="suit">${c.suit}</span><span class="rm" onclick="event.stopPropagation();removeCard('${id}',${i})">✕</span>`;
+    } else {
+      el.innerHTML = '<span class="add-icon">+</span>';
+      el.onclick = () => onEmpty(i);
+    }
+    cont.appendChild(el);
+  });
+}
+
+function removeCard(containerId, slotIdx){
+  if(containerId === 'board-cards'){
+    if(boardCards[slotIdx]){ usedCards.delete(cardKey(boardCards[slotIdx].rank, boardCards[slotIdx].suit)); boardCards.splice(slotIdx,1); }
+  } else {
+    const pi = parseInt(containerId.replace('p','').replace('-cards',''));
+    const c = players[pi].cards[slotIdx];
+    if(c){ usedCards.delete(cardKey(c.rank,c.suit)); players[pi].cards[slotIdx] = null; }
+  }
+  render();
+}
+
+/* ── PICKER ── */
+function openPicker(type, pIdx, sIdx){
+  activePicker = {type, pIdx, sIdx, suit:'♠'};
+  const cont = document.getElementById('picker-container');
+  cont.innerHTML = buildPicker();
+  cont.classList.add('open');
+}
+
+function closePicker(){
+  activePicker = null;
+  const cont = document.getElementById('picker-container');
+  cont.classList.remove('open');
+  cont.innerHTML = '';
+}
+
+function buildPicker(){
+  const suits = SUITS.map(s => {
+    const active = activePicker.suit === s ? ' active':'';
+    const red = (s==='♥'||s==='♦') ? ' red':'';
+    return `<button class="suit-btn${active}${red}" onclick="setSuit('${s}')">${s}</button>`;
+  }).join('');
+  const ranks = RANKS.map(r => {
+    const key = cardKey(r, activePicker.suit);
+    const used = usedCards.has(key) ? ' used':'';
+    return `<button class="rank-btn${used}" onclick="pickCard('${r}','${activePicker.suit}')">${r}</button>`;
+  }).join('');
+  return `<div class="picker-head"><span>Select card</span><button class="close-btn" onclick="closePicker()">✕</button></div><div class="suit-row">${suits}</div><div class="rank-grid">${ranks}</div>`;
+}
+
+function setSuit(s){
+  activePicker.suit = s;
+  document.getElementById('picker-container').innerHTML = buildPicker();
+}
+
+function pickCard(rank, suit){
+  const key = cardKey(rank, suit);
+  if(usedCards.has(key)) return;
+  usedCards.add(key);
+  const card = {rank, suit};
+  if(activePicker.type === 'player') players[activePicker.pIdx].cards[activePicker.sIdx] = card;
+  else boardCards[activePicker.sIdx] = card;
+  closePicker();
+  render();
+  document.getElementById('results').style.display = 'none';
+}
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active',['equity','odds'][i]===name));
+  document.getElementById('tab-equity').classList.toggle('active', name==='equity');
+  document.getElementById('tab-odds').classList.toggle('active', name==='odds');
+  if(name==='odds'){ calcOdds(); calcEV(); calcOuts(); }
+}
+
+/* ══════════════════════════════════════════
+   HAND EVALUATOR — 7-card best hand
+   Uses C(7,5) = 21 combination enumeration
+   Returns { rank: 0–8, name, tiebreak[] }
+   Hand ranks:
+     0 High card  1 Pair  2 Two pair  3 Trips
+     4 Straight   5 Flush 6 Full house
+     7 Quads      8 Straight flush
+═══════════════════════════════════════════ */
+
+function evaluate7(cards){
+  let best = {rank:-1, tiebreak:[]};
+  for(const combo of combinations(cards, 5)){
+    const h = evaluate5(combo);
+    if(h.rank > best.rank || (h.rank === best.rank && cmpTiebreak(h.tiebreak, best.tiebreak) > 0)) best = h;
+  }
+  return best;
+}
+
+function combinations(arr, k){
+  if(k === 0) return [[]];
+  if(arr.length < k) return [];
+  const [head, ...tail] = arr;
+  return [...combinations(tail, k-1).map(c => [head,...c]), ...combinations(tail, k)];
+}
+
+function evaluate5(cards){
+  const vals = cards.map(c => RANK_VAL[c.rank]).sort((a,b) => b-a);
+  const suits = cards.map(c => c.suit);
+  const flush = suits.every(s => s === suits[0]);
+  const straight = detectStraight(vals);
+  if(flush && straight !== false) return {rank:8, name: straight===12?'Royal flush':'Straight flush', tiebreak:[straight]};
+  const groups = groupBy(vals);
+  if(groups[0][1] === 4) return {rank:7, name:'Four of a kind', tiebreak:[groups[0][0], groups[1][0]]};
+  if(groups[0][1] === 3 && groups[1][1] === 2) return {rank:6, name:'Full house', tiebreak:[groups[0][0], groups[1][0]]};
+  if(flush) return {rank:5, name:'Flush', tiebreak:vals};
+  if(straight !== false) return {rank:4, name:'Straight', tiebreak:[straight]};
+  if(groups[0][1] === 3) return {rank:3, name:'Three of a kind', tiebreak:groups.map(g=>g[0])};
+  if(groups[0][1] === 2 && groups[1][1] === 2) return {rank:2, name:'Two pair', tiebreak:groups.map(g=>g[0])};
+  if(groups[0][1] === 2) return {rank:1, name:'Pair', tiebreak:groups.map(g=>g[0])};
+  return {rank:0, name:'High card', tiebreak:vals};
+}
+
+function detectStraight(sortedVals){
+  const u = [...new Set(sortedVals)];
+  // Wheel: A-2-3-4-5 (A counts as 1)
+  if(u.includes(12) && u.includes(0) && u.includes(1) && u.includes(2) && u.includes(3)) return 3;
+  for(let i = 0; i <= u.length - 5; i++){
+    if(u[i] - u[i+4] === 4 && new Set(u.slice(i,i+5)).size === 5) return u[i];
+  }
+  return false;
+}
+
+// Returns [[value, count], ...] sorted by count desc, value desc
+function groupBy(vals){
+  const m = {};
+  for(const v of vals) m[v] = (m[v]||0)+1;
+  return Object.entries(m).map(([v,c]) => [+v,c]).sort((a,b) => b[1]-a[1] || b[0]-a[0]);
+}
+
+function cmpTiebreak(a, b){
+  for(let i = 0; i < Math.max(a.length, b.length); i++){
+    const d = (a[i]||0) - (b[i]||0);
+    if(d !== 0) return d;
+  }
+  return 0;
+}
+
+function cmpHands(h1, h2){
+  if(h1.rank !== h2.rank) return h1.rank - h2.rank;
+  return cmpTiebreak(h1.tiebreak, h2.tiebreak);
+}
+
+/* ══════════════════════════════════════════
+   MONTE CARLO SIMULATION
+   Deals random cards for unknown slots,
+   evaluates all players, tracks wins/ties
+═══════════════════════════════════════════ */
+
+function buildDeck(){ return RANKS.flatMap(r => SUITS.map(s => ({rank:r, suit:s}))); }
+
+function shuffle(deck){
+  for(let i = deck.length - 1; i > 0; i--){
+    const j = (Math.random() * (i+1)) | 0;
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck;
+}
+
+function runSim(){
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  btn.textContent = 'Simulating...';
+  setTimeout(_runSim, 15);
+}
+
+function _runSim(){
+  const knownSet = new Set();
+  const pHands = players.map(p => {
+    const known = p.cards.filter(Boolean);
+    known.forEach(c => knownSet.add(cardKey(c.rank,c.suit)));
+    return known;
+  });
+  const knownBoard = boardCards.filter(Boolean);
+  knownBoard.forEach(c => knownSet.add(cardKey(c.rank,c.suit)));
+
+  const baseDeck = buildDeck().filter(c => !knownSet.has(cardKey(c.rank,c.suit)));
+  const N = 10000;
+  const wins = new Array(players.length).fill(0);
+  const ties = new Array(players.length).fill(0);
+
+  for(let i = 0; i < N; i++){
+    const deck = shuffle([...baseDeck]);
+    let di = 0;
+
+    const hands = pHands.map(ph => {
+      const h = [...ph];
+      while(h.length < 2) h.push(deck[di++]);
+      return h;
+    });
+
+    const board = [...knownBoard];
+    while(board.length < 5) board.push(deck[di++]);
+
+    const evals = hands.map(h => evaluate7([...h, ...board]));
+
+    // Find best hand rank
+    let bestRank = -1;
+    evals.forEach(e => { if(e.rank > bestRank) bestRank = e.rank; });
+
+    // Among players with best rank, find best tiebreak
+    let bestHand = null;
+    const winners = [];
+    evals.forEach((e,pi) => {
+      if(e.rank !== bestRank) return;
+      if(!bestHand || cmpHands(e, bestHand) > 0){ bestHand = e; winners.length = 0; winners.push(pi); }
+      else if(cmpHands(e, bestHand) === 0) winners.push(pi);
+    });
+
+    if(winners.length === 1) wins[winners[0]]++;
+    else winners.forEach(pi => ties[pi]++);
+  }
+
+  // ── Display results ──
+  const barsDiv = document.getElementById('eq-bars');
+  barsDiv.innerHTML = '';
+  players.forEach((p,i) => {
+    const eq = (wins[i] + ties[i] * 0.5) / N * 100;
+    const row = document.createElement('div');
+    row.className = 'eq-row';
+    row.innerHTML = `
+      <span class="eq-player">${p.label}</span>
+      <div class="eq-bar-wrap"><div class="eq-bar-fill" style="width:${eq.toFixed(1)}%;background:${P_COLORS[i%P_COLORS.length]}"></div></div>
+      <span class="eq-pct" style="color:${P_COLORS[i%P_COLORS.length]}">${eq.toFixed(1)}%</span>`;
+    barsDiv.appendChild(row);
+  });
+
+  const heroEq = (wins[0] + ties[0] * 0.5) / N * 100;
+  document.getElementById('master-fill').style.width = heroEq.toFixed(1) + '%';
+  document.getElementById('results').style.display = 'block';
+
+  // Show hand names if enough board cards are known
+  players.forEach((p,i) => {
+    const el = document.getElementById('p'+i+'-hand');
+    if(!el) return;
+    if(p.cards.every(Boolean) && knownBoard.length >= 3){
+      el.textContent = evaluate7([...p.cards, ...knownBoard]).name;
+    }
+  });
+
+  // Auto-populate pot odds equity
+  document.getElementById('eq-input').value = heroEq.toFixed(1);
+  document.getElementById('ev-prob').value = heroEq.toFixed(1);
+
+  document.getElementById('sim-info').textContent = `${N.toLocaleString()} simulations · ${knownBoard.length}/5 board cards known`;
+  document.getElementById('run-btn').disabled = false;
+  document.getElementById('run-btn').textContent = 'Run simulation — 10,000 hands';
+}
+
+/* ══════════════════════════════════════════
+   POT ODDS / EV CALCULATORS
+═══════════════════════════════════════════ */
+
+function calcOdds(){
+  const pot  = parseFloat(document.getElementById('pot').value) || 0;
+  const bet  = parseFloat(document.getElementById('bet').value) || 0;
+  const eq   = parseFloat(document.getElementById('eq-input').value) || 0;
+  const totalPot = pot + bet;
+  const potOdds  = bet > 0 ? (bet / totalPot * 100) : 0;
+  const edge     = eq - potOdds;
+  const call     = eq >= potOdds;
+
+  document.getElementById('odds-out').innerHTML = `
+    <div class="metric">
+      <div class="metric-label">Pot odds</div>
+      <div class="metric-val">${potOdds.toFixed(1)}%</div>
+      <div class="metric-sub">need ${potOdds.toFixed(1)}% eq to break even</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Your equity</div>
+      <div class="metric-val">${eq.toFixed(1)}%</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Decision</div>
+      <div class="metric-val ${call?'pos':'neg'}">${call?'CALL':'FOLD'}</div>
+      <div class="metric-sub">edge: ${edge>=0?'+':''}${edge.toFixed(1)}%</div>
+    </div>`;
+  calcEV();
+}
+
+function calcEV(){
+  const win  = parseFloat(document.getElementById('ev-win').value) || 0;
+  const lose = parseFloat(document.getElementById('ev-lose').value) || 0;
+  const prob = parseFloat(document.getElementById('ev-prob').value) || 0;
+  const p    = prob / 100;
+  const ev   = p * win - (1-p) * lose;
+  const pos  = ev >= 0;
+  document.getElementById('ev-out').innerHTML = `
+    <div class="metric" style="margin-top:0">
+      <div class="metric-label">Expected Value</div>
+      <div class="metric-val ${pos?'pos':'neg'}">${ev>=0?'+':''}$${ev.toFixed(2)}</div>
+      <div class="metric-sub">${prob.toFixed(1)}% × $${win} − ${(100-prob).toFixed(1)}% × $${lose} · ${pos?'profitable':'losing'} call</div>
+    </div>`;
+}
+
+function calcOuts(){
+  const outs   = parseInt(document.getElementById('outs').value) || 0;
+  const street = document.getElementById('outs-street').value;
+  const rem    = street === 'flop' ? 47 : 46;
+  let eq;
+  if(street === 'flop'){
+    eq = (1 - ((rem-outs)/rem) * ((rem-outs-1)/(rem-1))) * 100;
+  } else {
+    eq = outs / rem * 100;
+  }
+  document.getElementById('outs-out').textContent = eq.toFixed(1) + '%';
+}
+
+// Boot
+init();
+</script>
+</body>
+</html>

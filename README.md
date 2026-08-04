@@ -42,7 +42,7 @@ Tiebreaks are resolved using ordered arrays of card values (e.g. for a full hous
 
 For any given set of known cards (hero hand, villain hand, board), the engine:
 
-1. Builds a **reduced deck** — 52 cards minus all known cards
+1. Builds a **reduced deck** - 52 cards minus all known cards
 2. Runs **10,000 iterations**, each time:
    - Shuffling the remaining deck (Fisher-Yates)
    - Dealing unknown hole cards and completing the board
@@ -72,10 +72,10 @@ Where `p` is your equity as a decimal.
 
 ## Running locally
 
-No build step needed — it's a single HTML file.
+No build step needed - it's a single HTML file.
 
 ```bash
-git clone https://github.com/your-username/poker-equity-engine
+git clone https://github.com/m2s6h03/poker-equity-engine
 cd poker-equity-engine
 open index.html
 ```

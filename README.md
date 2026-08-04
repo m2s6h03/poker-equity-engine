@@ -1,15 +1,15 @@
 # Poker Equity Engine
 
-A Texas Hold'em equity calculator built from scratch in vanilla JavaScript. No libraries, no dependencies — just combinatorics, Monte Carlo simulation, and probability math.
+A Texas Hold'em equity calculator built from scratch in vanilla JavaScript. No libraries, no dependencies - just combinatorics, Monte Carlo simulation, and probability math.
 
 ---
 
 ## Features
 
-- **Equity Calculator** — pick hole cards and board cards for up to 4 players, run 10,000 Monte Carlo simulations to calculate win/tie/lose percentages
-- **Pot Odds Calculator** — given pot size, bet to call, and your equity, calculates whether a call is +EV
-- **EV Calculator** — expected value formula: `p × win − (1−p) × lose`
-- **Outs Calculator** — exact equity from outs using combinatorics, with Rule of 4 & 2 comparison
+- **Equity Calculator**- pick hole cards and board cards for up to 4 players, run 10,000 Monte Carlo simulations to calculate win/tie/lose percentages
+- **Pot Odds Calculator**- given pot size, bet to call, and your equity, calculates whether a call is +EV
+- **EV Calculator**- expected value formula: `p × win − (1−p) × lose`
+- **Outs Calculator**- exact equity from outs using combinatorics, with Rule of 4 & 2 comparison
 
 ---
 
@@ -17,7 +17,7 @@ A Texas Hold'em equity calculator built from scratch in vanilla JavaScript. No l
 
 ### Hand Evaluator
 
-The core evaluator uses **C(7,5) = 21 combination enumeration** — every possible 5-card hand is scored and the best is returned.
+The core evaluator uses **C(7,5) = 21 combination enumeration**- every possible 5-card hand is scored and the best is returned.
 
 Each 5-card hand is classified into one of 9 ranks:
 
@@ -101,9 +101,9 @@ poker-equity-engine/
 
 ## Potential extensions
 
-- **Range vs range equity** — define hand ranges (e.g. "top 20% of hands") and compute equity across all combinations
-- **Push/fold solver** — Nash equilibrium shove/call ranges by stack depth (big blinds)
-- **Hand history replay** — paste a hand history and visualize equity at each street
+- **Range vs range equity**- define hand ranges (e.g. "top 20% of hands") and compute equity across all combinations
+- **Push/fold solver**- Nash equilibrium shove/call ranges by stack depth (big blinds)
+- **Hand history replay**- paste a hand history and visualize equity at each street
 
 ---
 
